@@ -1,0 +1,29 @@
+# Configuración para account-service
+
+server:
+  port: 8082
+
+spring:
+  application:
+    name: account-service
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    properties:
+      hibernate:
+        default_schema: public
+
+eureka:
+  instance:
+    instance-id: ${spring.application.name}:${random.value}
+
+logging:
+  level:
+    com.dmh.accountservice: DEBUG
+
+account:
+  cvu:
+    length: 22
+  alias:
+    words-file: classpath:words.txt

@@ -1,0 +1,29 @@
+# Configuración para config-server
+
+server:
+  port: 8888
+
+spring:
+  application:
+    name: config-server
+  
+  cloud:
+    config:
+      server:
+        git:
+          # Usar sistema de archivos local en lugar de Git (para desarrollo)
+          uri: file:///${user.dir}/config-repo
+          default-label: main
+        # Configuración nativa (archivos locales)
+        native:
+          search-locations: classpath:/config-repo, file:./config-repo
+
+# Config server NO necesita registrarse en Eureka
+eureka:
+  client:
+    register-with-eureka: false
+    fetch-registry: false
+
+logging:
+  level:
+    org.springframework.cloud.config: DEBUG

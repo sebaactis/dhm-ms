@@ -1,0 +1,36 @@
+server:
+  port: 8081
+
+spring:
+  application:
+    name: user-service
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    properties:
+      hibernate:
+        default_schema: public
+
+feign:
+  client:
+    config:
+      default:
+        connectTimeout: 5000
+        readTimeout: 5000
+        loggerLevel: full
+
+# JWT Configuration
+jwt:
+  secret: YWJjZGVmZ2hpamtsbW5vcHFyc3R1dnd4eXoxMjM0NTY3ODkwYWJjZGVmZ2hpamtsbW5vcA==
+  expiration: 3600000  # 1 hour in milliseconds (60 * 60 * 1000)
+
+# Eureka Client
+eureka:
+  instance:
+    instance-id: ${spring.application.name}:${random.value}
+
+logging:
+  level:
+    com.dmh.userservice: DEBUG
+    feign: DEBUG
