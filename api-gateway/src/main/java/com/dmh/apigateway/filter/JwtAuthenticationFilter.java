@@ -34,40 +34,67 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
             "/api/users/token/validate"
     );
 
+    /**
+     * Constructor para verificar que el filtro se inicializa correctamente
+     */
+    public JwtAuthenticationFilter() {
+        logger.info("=================================================");
+        logger.info("🚀 JwtAuthenticationFilter INITIALIZED");
+        logger.info("🔒 Public routes: {}", PUBLIC_ROUTES);
+    }
+
     @Override
     public Mono<Void> filter(ServerWebExchange exchange, GatewayFilterChain chain) {
         ServerHttpRequest request = exchange.getRequest();
         String path = request.getURI().getPath();
+        String method = request.getMethod().name();
+        String host = request.getHeaders().getFirst("Host");
 
-        logger.debug("Request received: {} {}", request.getMethod(), path);
+        logger.info("=================================================");
+        logger.info("🔒 JWT Filter - Incoming Request");
+        logger.info("🔒 Method: {}, Path: {}, Host: {}", method, path, host);
+        logger.info("🔒 Full URI: {}", request.getURI());
+        logger.info("🔒 Query: {}", request.getQueryParams());
+        logger.info("🔒 Headers: {}", request.getHeaders());
 
-        if (isPublicRoute(path)) {
-            logger.debug("Public route, skipping authentication: {}", path);
+        boolean isPublic = isPublicRoute(path);
+        logger.info("🔒 Is public route? {}", isPublic);
+        logger.info("🔒 Public routes: {}", PUBLIC_ROUTES);
+
+        if (isPublic) {
+            logger.info("✅ PASSING: Public route, skipping authentication for {}", path);
             return chain.filter(exchange);
         }
 
+        logger.warn("🚫 REQUIRING AUTH: This path needs JWT validation: {}", path);
+
         String authHeader = request.getHeaders().getFirst("Authorization");
+        logger.info("🔒 Auth header present? {}", authHeader != null);
+
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-            logger.warn("Missing or invalid Authorization header for path: {}", path);
+            logger.error("❌ BLOCKED: Missing or invalid Authorization header for path: {}", path);
             return onError(exchange, "Missing or invalid Authorization header", HttpStatus.UNAUTHORIZED);
         }
 
         String token = authHeader.substring(7);
+        logger.info("🔒 Token extracted (first 20 chars): {}...", token.substring(0, Math.min(20, token.length())));
 
         if (!jwtUtil.validateToken(token)) {
-            logger.warn("Invalid or expired token for path: {}", path);
+            logger.error("❌ BLOCKED: Invalid or expired token for path: {}", path);
             return onError(exchange, "Invalid or expired token", HttpStatus.UNAUTHORIZED);
         }
+
+        logger.info("✅ TOKEN VALIDATED: Token is valid");
 
         return isTokenInBlacklist(token)
                 .flatMap(isBlacklisted -> {
                     if (isBlacklisted) {
-                        logger.warn("Token is blacklisted (user logged out) for path: {}", path);
+                        logger.warn("❌ BLOCKED: Token is blacklisted (user logged out) for path: {}", path);
                         return onError(exchange, "Token has been invalidated", HttpStatus.UNAUTHORIZED);
                     }
 
                     Long userId = jwtUtil.extractUserId(token);
-                    logger.debug("Token validated for user ID: {}", userId);
+                    logger.info("✅ ALLOWING: User ID {} validated successfully for path: {}", userId, path);
 
                     ServerHttpRequest modifiedRequest = exchange.getRequest().mutate()
                             .header("X-User-Id", userId.toString())
@@ -110,6 +137,8 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
 
     @Override
     public int getOrder() {
-        return -1;
+        // Filtro global debe tener orden positivo para ejecutarse después de filtros del sistema
+        // pero ANTES de procesar la request
+        return 0;
     }
 }

@@ -2,6 +2,7 @@ package com.dmh.accountservice.service;
 
 import com.dmh.accountservice.dto.AccountResponse;
 import com.dmh.accountservice.dto.CreateAccountRequest;
+import com.dmh.accountservice.dto.UpdateAccountRequest;
 import com.dmh.accountservice.entity.Account;
 import com.dmh.accountservice.exception.AccountAlreadyExistsException;
 import com.dmh.accountservice.exception.AccountNotFoundException;
@@ -72,6 +73,39 @@ public class AccountService {
                 .orElseThrow(() -> new AccountNotFoundException(
                         "Account not found for user ID: " + userId));
         return mapToResponse(account);
+    }
+
+    @Transactional(readOnly = true)
+    public AccountResponse getAccountById(Long accountId) {
+        logger.info("Fetching account for accountId: {}", accountId);
+        Account account = accountRepository.findById(accountId)
+                .orElseThrow(() -> new AccountNotFoundException(
+                        "Account not found with ID: " + accountId));
+        return mapToResponse(account);
+    }
+
+    /**
+     * Actualiza el alias de una cuenta
+     */
+    @Transactional
+    public AccountResponse updateAccount(Long accountId, UpdateAccountRequest request) {
+        logger.info("Updating account with ID: {}", accountId);
+
+        Account account = accountRepository.findById(accountId)
+                .orElseThrow(() -> new AccountNotFoundException(
+                        "Account not found with ID: " + accountId));
+
+        // Validar que el nuevo alias no esté en uso
+        if (!request.getAlias().equals(account.getAlias()) && 
+            accountRepository.existsByAlias(request.getAlias())) {
+            throw new AccountAlreadyExistsException("Alias " + request.getAlias() + " is already in use");
+        }
+
+        account.setAlias(request.getAlias());
+        Account updatedAccount = accountRepository.save(account);
+        logger.info("Account updated successfully: ID={}, New Alias={}", accountId, request.getAlias());
+
+        return mapToResponse(updatedAccount);
     }
 
     /**

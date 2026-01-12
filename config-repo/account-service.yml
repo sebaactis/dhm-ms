@@ -14,6 +14,11 @@ spring:
       hibernate:
         default_schema: public
 
+# JWT Configuration (debe coincidir con user-service)
+jwt:
+  secret: YWJjZGVmZ2hpamtsbW5vcHFyc3R1dnd4eXoxMjM0NTY3ODkwYWJjZGVmZ2hpamtsbW5vcA==
+  expiration: 3600000
+
 eureka:
   instance:
     instance-id: ${spring.application.name}:${random.value}

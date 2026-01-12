@@ -35,6 +35,9 @@ class AccountControllerTest {
     @MockBean
     private AccountService accountService;
 
+    @MockBean
+    private com.dmh.accountservice.service.TransactionService transactionService;
+
     @Test
     void testCreateAccount_Success() throws Exception {
         String requestJson = """

@@ -38,6 +38,9 @@ class UserControllerTest {
     @MockBean
     private UserService userService;
 
+    @MockBean
+    private com.dmh.userservice.util.JwtUtil jwtUtil;
+
     @Test
     void testRegister_Success() throws Exception {
         String requestJson = """
@@ -182,5 +185,46 @@ class UserControllerTest {
                 .param("token", "invalid.token"))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.valid").value(false));
+    }
+
+    @Test
+    void testUpdateUser_EmptyRequest_ShouldReturnBadRequest() throws Exception {
+        String emptyRequestJson = "{}";
+
+        when(jwtUtil.extractUserId("valid.token")).thenReturn(1L);
+
+        mockMvc.perform(patch("/api/users/1")
+                .header("Authorization", "Bearer valid.token")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(emptyRequestJson))
+            .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void testUpdateUser_OnlyEmail_ShouldSucceed() throws Exception {
+        String requestJson = """
+            {
+                "email": "newemail@example.com"
+            }
+            """;
+
+        when(jwtUtil.extractUserId("valid.token")).thenReturn(1L);
+        when(userService.updateUser(any(Long.class), any())).thenReturn(
+            UserResponse.builder()
+                .id(1L)
+                .firstName("Juan")
+                .lastName("Perez")
+                .dni("12345678")
+                .email("newemail@example.com")
+                .phone("5491155555555")
+                .build()
+        );
+
+        mockMvc.perform(patch("/api/users/1")
+                .header("Authorization", "Bearer valid.token")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(requestJson))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.email").value("newemail@example.com"));
     }
 }

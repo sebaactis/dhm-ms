@@ -4,8 +4,10 @@ import com.dmh.userservice.dto.LoginRequest;
 import com.dmh.userservice.dto.LoginResponse;
 import com.dmh.userservice.dto.LogoutResponse;
 import com.dmh.userservice.dto.RegisterUserRequest;
+import com.dmh.userservice.dto.UpdateUserRequest;
 import com.dmh.userservice.dto.UserResponse;
 import com.dmh.userservice.service.UserService;
+import com.dmh.userservice.util.JwtUtil;
 import jakarta.validation.Valid;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -22,9 +24,11 @@ public class UserController {
     private static final Logger logger = LoggerFactory.getLogger(UserController.class);
 
     private final UserService userService;
+    private final JwtUtil jwtUtil;
 
-    public UserController(UserService userService) {
+    public UserController(UserService userService, JwtUtil jwtUtil) {
         this.userService = userService;
+        this.jwtUtil = jwtUtil;
     }
 
     @PostMapping("/register")
@@ -56,6 +60,47 @@ public class UserController {
         logger.debug("GET /api/users/token/validate - Validating token");
         boolean isValid = userService.isTokenValid(token);
         return ResponseEntity.ok(Map.of("valid", isValid));
+    }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<UserResponse> getUserById(
+            @PathVariable Long id,
+            @RequestHeader("Authorization") String authHeader) {
+        logger.info("GET /api/users/{} - Fetching user", id);
+
+        // Extraer userId del token JWT
+        String token = extractTokenFromHeader(authHeader);
+        Long requestingUserId = jwtUtil.extractUserId(token);
+
+        // Validar que el usuario solo puede ver su propio perfil
+        if (!requestingUserId.equals(id)) {
+            logger.warn("User {} attempted to access profile of user {}", requestingUserId, id);
+            throw new IllegalArgumentException("You can only access your own profile");
+        }
+
+        UserResponse response = userService.getUserById(id);
+        return ResponseEntity.ok(response);
+    }
+
+    @PatchMapping("/{id}")
+    public ResponseEntity<UserResponse> updateUser(
+            @PathVariable Long id,
+            @Valid @RequestBody UpdateUserRequest request,
+            @RequestHeader("Authorization") String authHeader) {
+        logger.info("PATCH /api/users/{} - Updating user", id);
+
+        // Extraer userId del token JWT
+        String token = extractTokenFromHeader(authHeader);
+        Long requestingUserId = jwtUtil.extractUserId(token);
+
+        // Validar que el usuario solo puede actualizar su propio perfil
+        if (!requestingUserId.equals(id)) {
+            logger.warn("User {} attempted to update profile of user {}", requestingUserId, id);
+            throw new IllegalArgumentException("You can only update your own profile");
+        }
+
+        UserResponse response = userService.updateUser(id, request);
+        return ResponseEntity.ok(response);
     }
 
     private String extractTokenFromHeader(String authHeader) {

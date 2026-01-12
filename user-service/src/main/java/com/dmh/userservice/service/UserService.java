@@ -169,4 +169,80 @@ public class UserService {
     public boolean isTokenValid(String token) {
         return !tokenBlacklistRepository.existsByToken(token);
     }
+
+    /**
+     * Obtiene un usuario por ID incluyendo datos de su cuenta
+     */
+    @Transactional(readOnly = true)
+    public UserResponse getUserById(Long userId) {
+        logger.info("Fetching user with ID: {}", userId);
+
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> {
+                    logger.warn("User not found with ID: {}", userId);
+                    return new InvalidCredentialsException("User not found with ID: " + userId);
+                });
+
+        // Obtener datos de la cuenta
+        ResponseEntity<AccountResponseDTO> accountResponse = accountServiceClient.getAccountByUserId(userId);
+        AccountResponseDTO account = accountResponse.getBody();
+
+        return UserResponse.builder()
+                .id(user.getId())
+                .firstName(user.getFirstName())
+                .lastName(user.getLastName())
+                .dni(user.getDni())
+                .email(user.getEmail())
+                .phone(user.getPhone())
+                .cvu(account.getCvu())
+                .alias(account.getAlias())
+                .build();
+    }
+
+    /**
+     * Actualiza email y/o phone de un usuario
+     */
+    @Transactional
+    public UserResponse updateUser(Long userId, com.dmh.userservice.dto.UpdateUserRequest request) {
+        logger.info("Updating user with ID: {}", userId);
+
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> {
+                    logger.warn("User not found with ID: {}", userId);
+                    return new InvalidCredentialsException("User not found with ID: " + userId);
+                });
+
+        // Actualizar solo los campos que vienen en el request (PATCH semántico)
+        if (request.getEmail() != null && !request.getEmail().isBlank()) {
+            // Validar que el nuevo email no esté en uso por otro usuario
+            if (!request.getEmail().equals(user.getEmail()) && 
+                userRepository.existsByEmail(request.getEmail())) {
+                throw new UserAlreadyExistsException("Email " + request.getEmail() + " is already in use");
+            }
+            user.setEmail(request.getEmail());
+            logger.info("Updated email for user ID: {}", userId);
+        }
+
+        if (request.getPhone() != null && !request.getPhone().isBlank()) {
+            user.setPhone(request.getPhone());
+            logger.info("Updated phone for user ID: {}", userId);
+        }
+
+        User updatedUser = userRepository.save(user);
+
+        // Obtener datos de la cuenta para incluir en la respuesta
+        ResponseEntity<AccountResponseDTO> accountResponse = accountServiceClient.getAccountByUserId(userId);
+        AccountResponseDTO account = accountResponse.getBody();
+
+        return UserResponse.builder()
+                .id(updatedUser.getId())
+                .firstName(updatedUser.getFirstName())
+                .lastName(updatedUser.getLastName())
+                .dni(updatedUser.getDni())
+                .email(updatedUser.getEmail())
+                .phone(updatedUser.getPhone())
+                .cvu(account.getCvu())
+                .alias(account.getAlias())
+                .build();
+    }
 }

@@ -6,13 +6,6 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-/**
- * Request DTO para el login de usuario.
- * 
- * Campos requeridos:
- * - email: Email del usuario (formato válido)
- * - password: Contraseña (no se valida formato aquí, solo que no esté vacía)
- */
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
