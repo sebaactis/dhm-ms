@@ -190,6 +190,22 @@ public class AccountService {
         return wordList;
     }
 
+    /**
+     * Actualiza el balance de una cuenta (usado internamente por TransactionService)
+     */
+    @Transactional
+    public void updateBalance(Long accountId, BigDecimal newBalance) {
+        logger.info("Updating balance for accountId: {} to {}", accountId, newBalance);
+        
+        Account account = accountRepository.findById(accountId)
+                .orElseThrow(() -> new AccountNotFoundException("Account not found with ID: " + accountId));
+        
+        account.setBalance(newBalance);
+        accountRepository.save(account);
+        
+        logger.info("Balance updated successfully for accountId: {}", accountId);
+    }
+
     private AccountResponse mapToResponse(Account account) {
         return AccountResponse.builder()
                 .id(account.getId())

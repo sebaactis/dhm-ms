@@ -15,18 +15,6 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
-/**
- * Controlador para operaciones CRUD de tarjetas.
- * 
- * Endpoints:
- * - GET /api/accounts/{accountId}/cards - Listar todas las tarjetas de una cuenta
- * - GET /api/accounts/{accountId}/cards/{cardId} - Obtener tarjeta específica
- * - POST /api/accounts/{accountId}/cards - Crear nueva tarjeta
- * - DELETE /api/accounts/{accountId}/cards/{cardId} - Eliminar tarjeta
- * 
- * Seguridad:
- * - Todos los endpoints validan que el usuario del JWT sea owner de la cuenta
- */
 @RestController
 @RequestMapping("/api/accounts/{accountId}/cards")
 public class CardController {
@@ -42,10 +30,6 @@ public class CardController {
         this.jwtUtil = jwtUtil;
     }
 
-    /**
-     * Valida que la cuenta pertenezca al usuario del JWT.
-     * @throws IllegalArgumentException si la cuenta no pertenece al usuario
-     */
     private void validateAccountOwnership(Long accountId, String authHeader) {
         String token = extractTokenFromHeader(authHeader);
         Long requestingUserId = jwtUtil.extractUserId(token);
@@ -68,18 +52,6 @@ public class CardController {
         return authHeader.substring(7);
     }
 
-    /**
-     * Obtiene todas las tarjetas asociadas a una cuenta.
-     * 
-     * Respuestas:
-     * - 200 OK: Lista de tarjetas (puede estar vacía [])
-     * - 403 FORBIDDEN: Usuario no es owner de la cuenta
-     * - 404 NOT FOUND: Cuenta no existe
-     * 
-     * @param accountId ID de la cuenta
-     * @param authHeader JWT token del usuario
-     * @return Lista de tarjetas (vacía si no hay tarjetas)
-     */
     @GetMapping
     public ResponseEntity<List<CardResponse>> getAllCards(
             @PathVariable Long accountId,
@@ -100,19 +72,6 @@ public class CardController {
         return ResponseEntity.ok(cards);
     }
 
-    /**
-     * Obtiene una tarjeta específica de una cuenta.
-     * 
-     * Respuestas:
-     * - 200 OK: Datos de la tarjeta
-     * - 403 FORBIDDEN: Usuario no es owner de la cuenta
-     * - 404 NOT FOUND: Tarjeta no existe o no pertenece a la cuenta
-     * 
-     * @param accountId ID de la cuenta
-     * @param cardId ID de la tarjeta
-     * @param authHeader JWT token del usuario
-     * @return Datos de la tarjeta
-     */
     @GetMapping("/{cardId}")
     public ResponseEntity<CardResponse> getCardById(
             @PathVariable Long accountId,
@@ -127,19 +86,6 @@ public class CardController {
         return ResponseEntity.ok(card);
     }
 
-    /**
-     * Crea una nueva tarjeta para una cuenta.
-     * 
-     * Respuestas:
-     * - 201 CREATED: Tarjeta creada exitosamente
-     * - 403 FORBIDDEN: Usuario no es owner de la cuenta
-     * - 404 NOT FOUND: Cuenta no existe
-     * 
-     * @param accountId ID de la cuenta
-     * @param request Datos de la tarjeta
-     * @param authHeader JWT token del usuario
-     * @return Tarjeta creada
-     */
     @PostMapping
     public ResponseEntity<CardResponse> createCard(
             @PathVariable Long accountId,
@@ -154,19 +100,6 @@ public class CardController {
         return ResponseEntity.status(HttpStatus.CREATED).body(card);
     }
 
-    /**
-     * Elimina (bloquea) una tarjeta.
-     * 
-     * Respuestas:
-     * - 200 OK: Tarjeta eliminada correctamente
-     * - 403 FORBIDDEN: Usuario no es owner de la cuenta
-     * - 404 NOT FOUND: Tarjeta no existe o no pertenece a la cuenta
-     * 
-     * @param accountId ID de la cuenta
-     * @param cardId ID de la tarjeta
-     * @param authHeader JWT token del usuario
-     * @return 200 OK con datos de la tarjeta eliminada
-     */
     @DeleteMapping("/{cardId}")
     public ResponseEntity<CardResponse> deleteCard(
             @PathVariable Long accountId,

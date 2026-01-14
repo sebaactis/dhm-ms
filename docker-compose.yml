@@ -1,0 +1,250 @@
+version: '3.8'
+
+# ==========================================
+# NETWORKS
+# ==========================================
+networks:
+  dmh-network:
+    driver: bridge
+
+# ==========================================
+# VOLUMES
+# ==========================================
+volumes:
+  postgres-user-data:
+    driver: local
+  postgres-account-data:
+    driver: local
+  config-repo-data:
+    driver: local
+
+# ==========================================
+# SERVICES
+# ==========================================
+services:
+  # ==========================================
+  # PostgreSQL - User Database
+  # ==========================================
+  postgres-user:
+    image: postgres:16-alpine
+    container_name: dmh-postgres-user
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-dmh-user-db}
+      POSTGRES_USER: ${POSTGRES_USER:-dmhuser}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-dmhpassword123}
+      TZ: UTC
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres-user-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-dmhuser} -d ${POSTGRES_DB:-dmh-user-db}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - dmh-network
+
+  # ==========================================
+  # PostgreSQL - Account Database
+  # ==========================================
+  postgres-account:
+    image: postgres:16-alpine
+    container_name: dmh-postgres-account
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_ACCOUNT_DB:-dmh-account-db}
+      POSTGRES_USER: ${POSTGRES_ACCOUNT_USER:-dmhaccount}
+      POSTGRES_PASSWORD: ${POSTGRES_ACCOUNT_PASSWORD:-dmhpassword123}
+      TZ: UTC
+    ports:
+      - "5434:5432"
+    volumes:
+      - postgres-account-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_ACCOUNT_USER:-dmhaccount} -d ${POSTGRES_ACCOUNT_DB:-dmh-account-db}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - dmh-network
+
+  # ==========================================
+  # Config Server
+  # ==========================================
+  config-server:
+    build:
+      context: .
+      dockerfile: config-server/Dockerfile
+    image: dmh/config-server:latest
+    container_name: dmh-config-server
+    restart: unless-stopped
+    ports:
+      - "8888:8888"
+    volumes:
+      - config-repo-data:/app/config-repo
+      - ./config-server/src/main/resources:/app/config-repo:ro
+    environment:
+      SPRING_PROFILES_ACTIVE: native,docker
+      JAVA_OPTS: >-
+        -XX:+UseContainerSupport
+        -XX:MaxRAMPercentage=75.0
+        -XX:+UseG1GC
+        -Djava.security.egd=file:/dev/./urandom
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8888/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    networks:
+      - dmh-network
+
+  # ==========================================
+  # Eureka Server (Service Discovery)
+  # ==========================================
+  eureka-server:
+    build:
+      context: .
+      dockerfile: eureka-server/Dockerfile
+    image: dmh/eureka-server:latest
+    container_name: dmh-eureka-server
+    restart: unless-stopped
+    ports:
+      - "8761:8761"
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      EUREKA_CLIENT_SERVICE_URL_DEFAULT_ZONE: http://eureka-server:8761/eureka/
+      JAVA_OPTS: >-
+        -XX:+UseContainerSupport
+        -XX:MaxRAMPercentage=75.0
+        -XX:+UseG1GC
+        -Djava.security.egd=file:/dev/./urandom
+    depends_on:
+      config-server:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8761/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    networks:
+      - dmh-network
+
+  # ==========================================
+  # User Service
+  # ==========================================
+  user-service:
+    build:
+      context: .
+      dockerfile: user-service/Dockerfile
+    image: dmh/user-service:latest
+    container_name: dmh-user-service
+    restart: unless-stopped
+    ports:
+      - "8081:8081"
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-user:5432/${POSTGRES_DB:-dmh-user-db}
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-dmhuser}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-dmhpassword123}
+      EUREKA_CLIENT_SERVICE_URL_DEFAULT_ZONE: http://eureka-server:8761/eureka/
+      JAVA_OPTS: >-
+        -XX:+UseContainerSupport
+        -XX:MaxRAMPercentage=75.0
+        -XX:+UseG1GC
+        -Djava.security.egd=file:/dev/./urandom
+    depends_on:
+      config-server:
+        condition: service_healthy
+      eureka-server:
+        condition: service_healthy
+      postgres-user:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8081/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    networks:
+      - dmh-network
+
+  # ==========================================
+  # Account Service
+  # ==========================================
+  account-service:
+    build:
+      context: .
+      dockerfile: account-service/Dockerfile
+    image: dmh/account-service:latest
+    container_name: dmh-account-service
+    restart: unless-stopped
+    ports:
+      - "8082:8082"
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-account:5432/${POSTGRES_ACCOUNT_DB:-dmh-account-db}
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_ACCOUNT_USER:-dmhaccount}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_ACCOUNT_PASSWORD:-dmhpassword123}
+      EUREKA_CLIENT_SERVICE_URL_DEFAULT_ZONE: http://eureka-server:8761/eureka/
+      JAVA_OPTS: >-
+        -XX:+UseContainerSupport
+        -XX:MaxRAMPercentage=75.0
+        -XX:+UseG1GC
+        -Djava.security.egd=file:/dev/./urandom
+    depends_on:
+      config-server:
+        condition: service_healthy
+      eureka-server:
+        condition: service_healthy
+      postgres-account:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8082/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    networks:
+      - dmh-network
+
+  # ==========================================
+  # API Gateway
+  # ==========================================
+  api-gateway:
+    build:
+      context: .
+      dockerfile: api-gateway/Dockerfile
+    image: dmh/api-gateway:latest
+    container_name: dmh-api-gateway
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      EUREKA_CLIENT_SERVICE_URL_DEFAULT_ZONE: http://eureka-server:8761/eureka/
+      JAVA_OPTS: >-
+        -XX:+UseContainerSupport
+        -XX:MaxRAMPercentage=75.0
+        -XX:+UseG1GC
+        -Djava.security.egd=file:/dev/./urandom
+    depends_on:
+      config-server:
+        condition: service_healthy
+      eureka-server:
+        condition: service_healthy
+      user-service:
+        condition: service_healthy
+      account-service:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    networks:
+      - dmh-network

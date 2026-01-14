@@ -1,0 +1,718 @@
+{
+	"info": {
+		"_postman_id": "dmh-api-collection",
+		"name": "Digital Money House API",
+		"description": "Colección completa de endpoints para Digital Money House - Microservices",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"variable": [
+		{
+			"key": "baseUrl",
+			"value": "http://localhost:8080",
+			"type": "string"
+		},
+		{
+			"key": "token",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "userId",
+			"value": "1",
+			"type": "string"
+		},
+		{
+			"key": "accountId",
+			"value": "1",
+			"type": "string"
+		},
+		{
+			"key": "cardId",
+			"value": "1",
+			"type": "string"
+		},
+		{
+			"key": "transactionId",
+			"value": "1",
+			"type": "string"
+		}
+	],
+	"item": [
+		{
+			"name": "User Service",
+			"item": [
+				{
+					"name": "1. Register User",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 201) {",
+									"    const response = pm.response.json();",
+									"    pm.collectionVariables.set('userId', response.id);",
+									"    pm.collectionVariables.set('accountId', response.accountId);",
+									"    console.log('User registered: ID=' + response.id);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"firstName\": \"Juan\",\n  \"lastName\": \"Pérez\",\n  \"dni\": \"12345678\",\n  \"email\": \"juan.perez@example.com\",\n  \"phone\": \"+541112345678\",\n  \"password\": \"MiPassword123!\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/users/register",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "users", "register"]
+						},
+						"description": "Registra un nuevo usuario en el sistema y crea automáticamente su cuenta"
+					},
+					"response": []
+				},
+				{
+					"name": "2. Login",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    const response = pm.response.json();",
+									"    pm.collectionVariables.set('token', response.token);",
+									"    pm.collectionVariables.set('userId', response.userId);",
+									"    console.log('Login successful. Token saved.');",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"juan.perez@example.com\",\n  \"password\": \"MiPassword123!\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/users/login",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "users", "login"]
+						},
+						"description": "Autentica un usuario y retorna un JWT token"
+					},
+					"response": []
+				},
+				{
+					"name": "3. Logout",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/users/logout",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "users", "logout"]
+						},
+						"description": "Cierra la sesión del usuario y invalida el token"
+					},
+					"response": []
+				},
+				{
+					"name": "4. Validate Token",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/users/token/validate?token={{token}}",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "users", "token", "validate"],
+							"query": [
+								{
+									"key": "token",
+									"value": "{{token}}"
+								}
+							]
+						},
+						"description": "Valida si un token JWT es válido"
+					},
+					"response": []
+				},
+				{
+					"name": "5. Get User by ID",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/users/{{userId}}",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "users", "{{userId}}"]
+						},
+						"description": "Obtiene los datos de un usuario por su ID"
+					},
+					"response": []
+				},
+				{
+					"name": "6. Update User",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"firstName\": \"Juan Carlos\",\n  \"phone\": \"+541198765432\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/users/{{userId}}",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "users", "{{userId}}"]
+						},
+						"description": "Actualiza los datos de un usuario"
+					},
+					"response": []
+				}
+			],
+			"description": "Endpoints para gestión de usuarios (registro, login, perfil)"
+		},
+		{
+			"name": "Account Service",
+			"item": [
+				{
+					"name": "7. Create Account",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 201) {",
+									"    const response = pm.response.json();",
+									"    pm.collectionVariables.set('accountId', response.id);",
+									"    console.log('Account created: ID=' + response.id);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"userId\": {{userId}}\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/accounts",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "accounts"]
+						},
+						"description": "Crea una nueva cuenta para un usuario"
+					},
+					"response": []
+				},
+				{
+					"name": "8. Get Account by User ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/accounts/user/{{userId}}",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "accounts", "user", "{{userId}}"]
+						},
+						"description": "Obtiene la cuenta asociada a un usuario"
+					},
+					"response": []
+				},
+				{
+					"name": "9. Get Account by ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/accounts/{{accountId}}",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "accounts", "{{accountId}}"]
+						},
+						"description": "Obtiene una cuenta por su ID"
+					},
+					"response": []
+				},
+				{
+					"name": "10. Get Last Transactions",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/accounts/{{accountId}}/transactions?limit=10",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "accounts", "{{accountId}}", "transactions"],
+							"query": [
+								{
+									"key": "limit",
+									"value": "10",
+									"description": "Número de transacciones a retornar (default: 5)"
+								}
+							]
+						},
+						"description": "Obtiene las últimas N transacciones de una cuenta"
+					},
+					"response": []
+				},
+				{
+					"name": "11. Get All Activity (No Filters)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/accounts/{{accountId}}/activity",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "accounts", "{{accountId}}", "activity"]
+						},
+						"description": "Obtiene toda la actividad de una cuenta sin filtros"
+					},
+					"response": []
+				},
+				{
+					"name": "12. Filter Activity by Type",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/accounts/{{accountId}}/activity?type=DEPOSIT",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "accounts", "{{accountId}}", "activity"],
+							"query": [
+								{
+									"key": "type",
+									"value": "DEPOSIT",
+									"description": "DEPOSIT, WITHDRAWAL, TRANSFER_IN, TRANSFER_OUT"
+								}
+							]
+						},
+						"description": "Filtra actividad por tipo de transacción"
+					},
+					"response": []
+				},
+				{
+					"name": "13. Filter Activity by Amount Range",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/accounts/{{accountId}}/activity?amountRange=RANGE_1000_5000",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "accounts", "{{accountId}}", "activity"],
+							"query": [
+								{
+									"key": "amountRange",
+									"value": "RANGE_1000_5000",
+									"description": "RANGE_0_1000, RANGE_1000_5000, RANGE_5000_20000, RANGE_20000_100000, RANGE_OVER_100000"
+								}
+							]
+						},
+						"description": "Filtra actividad por rango de monto"
+					},
+					"response": []
+				},
+				{
+					"name": "14. Filter Activity by Date Period",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/accounts/{{accountId}}/activity?dateFrom=2026-01-01&dateTo=2026-01-31",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "accounts", "{{accountId}}", "activity"],
+							"query": [
+								{
+									"key": "dateFrom",
+									"value": "2026-01-01",
+									"description": "Fecha desde (yyyy-MM-dd)"
+								},
+								{
+									"key": "dateTo",
+									"value": "2026-01-31",
+									"description": "Fecha hasta (yyyy-MM-dd)"
+								}
+							]
+						},
+						"description": "Filtra actividad por período de fechas"
+					},
+					"response": []
+				},
+				{
+					"name": "15. Filter Activity (Multiple Filters)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/accounts/{{accountId}}/activity?type=DEPOSIT&amountRange=RANGE_1000_5000&dateFrom=2026-01-01&dateTo=2026-01-31",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "accounts", "{{accountId}}", "activity"],
+							"query": [
+								{
+									"key": "type",
+									"value": "DEPOSIT"
+								},
+								{
+									"key": "amountRange",
+									"value": "RANGE_1000_5000"
+								},
+								{
+									"key": "dateFrom",
+									"value": "2026-01-01"
+								},
+								{
+									"key": "dateTo",
+									"value": "2026-01-31"
+								}
+							]
+						},
+						"description": "Filtra actividad con múltiples filtros combinados"
+					},
+					"response": []
+				},
+				{
+					"name": "16. Get Activity Detail",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/accounts/{{accountId}}/activity/{{transactionId}}",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "accounts", "{{accountId}}", "activity", "{{transactionId}}"]
+						},
+						"description": "Obtiene el detalle de una transacción específica"
+					},
+					"response": []
+				},
+				{
+					"name": "17. Deposit from Card",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 201) {",
+									"    const response = pm.response.json();",
+									"    pm.collectionVariables.set('transactionId', response.transactionId);",
+									"    console.log('Deposit created: Transaction ID=' + response.transactionId);",
+									"    console.log('New balance: ' + response.newBalance);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"cardId\": {{cardId}},\n  \"amount\": 500.00,\n  \"description\": \"Recarga de billetera\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/accounts/{{accountId}}/deposit",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "accounts", "{{accountId}}", "deposit"]
+						},
+						"description": "Ingresa dinero desde una tarjeta a la billetera"
+					},
+					"response": []
+				},
+				{
+					"name": "18. Get Recent Transfers (Last Destinations)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/accounts/{{accountId}}/transferences?limit=5",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "accounts", "{{accountId}}", "transferences"],
+							"query": [
+								{
+									"key": "limit",
+									"value": "5",
+									"description": "Número de destinatarios a retornar (default: 5)"
+								}
+							]
+						},
+						"description": "Obtiene los últimos N destinatarios de transferencias salientes. Status codes: 200 OK, 403 Forbidden (permisos insuficientes)"
+					},
+					"response": []
+				},
+				{
+					"name": "19. Perform Transfer",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    const response = pm.response.json();",
+									"    pm.collectionVariables.set('transactionId', response.transactionId);",
+									"    console.log('Transfer completed: Transaction ID=' + response.transactionId);",
+									"    console.log('New balance: ' + response.newBalance);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"destination\": \"1234567890123456789012\",\n  \"amount\": 100.00,\n  \"description\": \"Pago de cena\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/accounts/{{accountId}}/transfers",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "accounts", "{{accountId}}", "transfers"]
+						},
+						"description": "Realiza una transferencia a otra cuenta usando CVU, CBU o alias. Status codes: 200 OK, 400 Bad Request (cuenta inexistente), 403 Forbidden (permisos insuficientes), 410 Gone (fondos insuficientes), 404 Not Found"
+					},
+					"response": []
+				},
+				{
+					"name": "20. Update Account Alias",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"alias\": \"mi.nueva.billetera\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/accounts/{{accountId}}",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "accounts", "{{accountId}}"]
+						},
+						"description": "Actualiza el alias de una cuenta"
+					},
+					"response": []
+				}
+			],
+			"description": "Endpoints para gestión de cuentas y transacciones"
+		},
+		{
+			"name": "Card Service",
+			"item": [
+				{
+					"name": "21. Get All Cards",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/accounts/{{accountId}}/cards",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "accounts", "{{accountId}}", "cards"]
+						},
+						"description": "Lista todas las tarjetas asociadas a una cuenta"
+					},
+					"response": []
+				},
+				{
+					"name": "22. Get Card by ID",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/accounts/{{accountId}}/cards/{{cardId}}",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "accounts", "{{accountId}}", "cards", "{{cardId}}"]
+						},
+						"description": "Obtiene una tarjeta específica por su ID"
+					},
+					"response": []
+				},
+				{
+					"name": "23. Create Card",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 201) {",
+									"    const response = pm.response.json();",
+									"    pm.collectionVariables.set('cardId', response.id);",
+									"    console.log('Card created: ID=' + response.id);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"lastFourDigits\": \"9876\",\n  \"cardHolderName\": \"JUAN PEREZ\",\n  \"expirationDate\": \"2029-12-31\",\n  \"cardType\": \"DEBIT\",\n  \"cardBrand\": \"VISA\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/accounts/{{accountId}}/cards",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "accounts", "{{accountId}}", "cards"]
+						},
+						"description": "Crea una nueva tarjeta para una cuenta"
+					},
+					"response": []
+				},
+				{
+					"name": "24. Delete Card (Block)",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/accounts/{{accountId}}/cards/{{cardId}}",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "accounts", "{{accountId}}", "cards", "{{cardId}}"]
+						},
+						"description": "Elimina (bloquea) una tarjeta"
+					},
+					"response": []
+				}
+			],
+			"description": "Endpoints para gestión de tarjetas (CRUD completo)"
+		}
+	]
+}
