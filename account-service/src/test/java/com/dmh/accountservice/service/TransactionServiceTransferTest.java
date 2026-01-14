@@ -171,6 +171,7 @@ class TransactionServiceTransferTest {
         Transaction transferOut = new Transaction();
         transferOut.setId(1L);
         transferOut.setDescription("Transfer to CVU: 0987654321098765432109");
+        transferOut.setAmount(new BigDecimal("100.00"));
         transferOut.setCreatedAt(LocalDateTime.now());
 
         when(transactionRepository.findTransfersOutByAccountId(eq(1L), any()))
@@ -183,6 +184,8 @@ class TransactionServiceTransferTest {
         assertNotNull(recipients);
         assertEquals(1, recipients.size());
         assertEquals("0987654321098765432109", recipients.get(0).getDestination());
+        assertEquals(new BigDecimal("100.00"), recipients.get(0).getAmount());
+        assertNotNull(recipients.get(0).getLastTransferDate(), "Last transfer date should not be null");
     }
 
     @Test

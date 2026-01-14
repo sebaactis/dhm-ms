@@ -6,8 +6,7 @@ import com.dmh.accountservice.dto.TransferResponse;
 import com.dmh.accountservice.exception.ForbiddenAccessException;
 import com.dmh.accountservice.service.AccountService;
 import com.dmh.accountservice.service.TransactionService;
-import com.dmh.accountservice.util.JwtUtil;
-import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -36,18 +35,8 @@ class AccountControllerTransferTest {
     @Mock
     private TransactionService transactionService;
 
-    @Mock
-    private JwtUtil jwtUtil;
-
     @InjectMocks
     private AccountController accountController;
-
-    private final String validToken = "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.test";
-
-    @BeforeEach
-    void setUp() {
-        when(jwtUtil.extractUserId(anyString())).thenReturn(100L);
-    }
 
     @Test
     void testGetRecentTransfers_Success() {
@@ -63,13 +52,15 @@ class AccountControllerTransferTest {
 
         // Act
         ResponseEntity<List<RecentTransferRecipient>> response =
-                accountController.getRecentTransfers(1L, 5, validToken);
+                accountController.getRecentTransfers(1L, 5, 100L);
 
         // Assert
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertNotNull(response.getBody());
         assertEquals(1, response.getBody().size());
         assertEquals("0987654321098765432109", response.getBody().get(0).getDestination());
+        assertEquals(BigDecimal.valueOf(100.00), response.getBody().get(0).getAmount());
+        assertNotNull(response.getBody().get(0).getLastTransferDate());
     }
 
     @Test
@@ -80,7 +71,7 @@ class AccountControllerTransferTest {
 
         // Act & Assert
         assertThrows(ForbiddenAccessException.class, () -> {
-            accountController.getRecentTransfers(1L, 5, validToken);
+            accountController.getRecentTransfers(1L, 5, 100L);
         });
     }
 
@@ -108,7 +99,7 @@ class AccountControllerTransferTest {
 
         // Act
         ResponseEntity<TransferResponse> response =
-                accountController.performTransfer(1L, request, validToken);
+                accountController.performTransfer(1L, request, 100L);
 
         // Assert
         assertEquals(HttpStatus.OK, response.getStatusCode());
@@ -132,7 +123,7 @@ class AccountControllerTransferTest {
 
         // Act & Assert
         assertThrows(com.dmh.accountservice.exception.InsufficientFundsException.class, () -> {
-            accountController.performTransfer(1L, request, validToken);
+            accountController.performTransfer(1L, request, 100L);
         });
     }
 
@@ -149,7 +140,7 @@ class AccountControllerTransferTest {
 
         // Act & Assert
         assertThrows(com.dmh.accountservice.exception.AccountNotFoundException.class, () -> {
-            accountController.performTransfer(1L, request, validToken);
+            accountController.performTransfer(1L, request, 100L);
         });
     }
 }

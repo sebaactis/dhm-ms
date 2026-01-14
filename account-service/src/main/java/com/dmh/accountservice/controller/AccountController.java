@@ -14,7 +14,6 @@ import com.dmh.accountservice.dto.UpdateAccountRequest;
 import com.dmh.accountservice.entity.Transaction;
 import com.dmh.accountservice.service.AccountService;
 import com.dmh.accountservice.service.TransactionService;
-import com.dmh.accountservice.util.JwtUtil;
 import jakarta.validation.Valid;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -32,31 +31,55 @@ public class AccountController {
     private static final Logger logger = LoggerFactory.getLogger(AccountController.class);
     private final AccountService accountService;
     private final TransactionService transactionService;
-    private final JwtUtil jwtUtil;
 
-    public AccountController(AccountService accountService, TransactionService transactionService, JwtUtil jwtUtil) {
+    public AccountController(AccountService accountService, TransactionService transactionService) {
         this.accountService = accountService;
         this.transactionService = transactionService;
-        this.jwtUtil = jwtUtil;
     }
 
     @PostMapping
-    public ResponseEntity<AccountResponse> createAccount(@Valid @RequestBody CreateAccountRequest request) {
+    public ResponseEntity<AccountResponse> createAccount(
+            @Valid @RequestBody CreateAccountRequest request,
+            @RequestHeader("X-User-Id") Long authenticatedUserId) {
         logger.info("POST /api/accounts - Creating account for userId: {}", request.getUserId());
+
+        // Validar que el usuario autenticado solo puede crear cuenta para sí mismo
+        if (!request.getUserId().equals(authenticatedUserId)) {
+            logger.warn("User {} attempted to create account for user {}", 
+                       authenticatedUserId, request.getUserId());
+            throw new IllegalArgumentException("You can only create an account for yourself");
+        }
+
         AccountResponse response = accountService.createAccount(request);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
     @GetMapping("/user/{userId}")
-    public ResponseEntity<AccountResponse> getAccountByUserId(@PathVariable Long userId) {
+    public ResponseEntity<AccountResponse> getAccountByUserId(
+            @PathVariable Long userId,
+            @RequestHeader("X-User-Id") Long authenticatedUserId) {
         logger.info("GET /api/accounts/user/{} - Fetching account", userId);
+
+        // Validar que el usuario autenticado solo puede ver su propia cuenta
+        if (!userId.equals(authenticatedUserId)) {
+            logger.warn("User {} attempted to access account of user {}", 
+                       authenticatedUserId, userId);
+            throw new IllegalArgumentException("You can only access your own account");
+        }
+
         AccountResponse response = accountService.getAccountByUserId(userId);
         return ResponseEntity.ok(response);
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<AccountResponse> getAccountById(@PathVariable Long id) {
+    public ResponseEntity<AccountResponse> getAccountById(
+            @PathVariable Long id,
+            @RequestHeader("X-User-Id") Long authenticatedUserId) {
         logger.info("GET /api/accounts/{} - Fetching account by ID", id);
+
+        // Validar ownership usando el método helper
+        validateAccountOwnership(id, authenticatedUserId);
+
         AccountResponse response = accountService.getAccountById(id);
         return ResponseEntity.ok(response);
     }
@@ -64,8 +87,13 @@ public class AccountController {
     @GetMapping("/{id}/transactions")
     public ResponseEntity<List<TransactionResponse>> getAccountTransactions(
             @PathVariable Long id,
-            @RequestParam(required = false, defaultValue = "5") Integer limit) {
+            @RequestParam(required = false, defaultValue = "5") Integer limit,
+            @RequestHeader("X-User-Id") Long authenticatedUserId) {
         logger.info("GET /api/accounts/{}/transactions?limit={} - Fetching transactions", id, limit);
+
+        // Validar ownership de la cuenta antes de mostrar transacciones
+        validateAccountOwnership(id, authenticatedUserId);
+
         List<TransactionResponse> transactions = transactionService.getLastTransactions(id, limit);
         return ResponseEntity.ok(transactions);
     }
@@ -74,14 +102,10 @@ public class AccountController {
     public ResponseEntity<List<RecentTransferRecipient>> getRecentTransfers(
             @PathVariable Long id,
             @RequestParam(required = false, defaultValue = "5") Integer limit,
-            @RequestHeader("Authorization") String authHeader) {
+            @RequestHeader("X-User-Id") Long authenticatedUserId) {
         logger.info("GET /api/accounts/{}/transferences?limit={} - Fetching recent transfers", id, limit);
 
-        // Extraer userId del token JWT
-        String token = extractTokenFromHeader(authHeader);
-        Long requestingUserId = jwtUtil.extractUserId(token);
-
-        List<RecentTransferRecipient> recipients = transactionService.getRecentTransfers(id, limit, requestingUserId);
+        List<RecentTransferRecipient> recipients = transactionService.getRecentTransfers(id, limit, authenticatedUserId);
         return ResponseEntity.ok(recipients);
     }
 
@@ -89,32 +113,24 @@ public class AccountController {
     public ResponseEntity<TransferResponse> performTransfer(
             @PathVariable Long id,
             @Valid @RequestBody CreateTransferRequest request,
-            @RequestHeader("Authorization") String authHeader) {
+            @RequestHeader("X-User-Id") Long authenticatedUserId) {
         logger.info("POST /api/accounts/{}/transfers - Performing transfer to {}, amount: {}", 
                    id, request.getDestination(), request.getAmount());
 
-        // Extraer userId del token JWT
-        String token = extractTokenFromHeader(authHeader);
-        Long requestingUserId = jwtUtil.extractUserId(token);
-
-        TransferResponse response = transactionService.performTransfer(id, request, requestingUserId);
+        TransferResponse response = transactionService.performTransfer(id, request, authenticatedUserId);
         return ResponseEntity.status(HttpStatus.OK).body(response);
     }
 
     @GetMapping("/{id}/activity")
     public ResponseEntity<List<TransactionResponse>> getAccountActivity(
             @PathVariable Long id,
-            @RequestHeader("Authorization") String authHeader,
+            @RequestHeader("X-User-Id") Long authenticatedUserId,
             @RequestParam(required = false) Transaction.TransactionType type,
             @RequestParam(required = false) AmountRange amountRange,
             @RequestParam(required = false) LocalDate dateFrom,
             @RequestParam(required = false) LocalDate dateTo) {
         logger.info("GET /api/accounts/{}/activity - Fetching activity with filters: type={}, amountRange={}, dateFrom={}, dateTo={}", 
                     id, type, amountRange, dateFrom, dateTo);
-
-        // Extraer userId del token JWT
-        String token = extractTokenFromHeader(authHeader);
-        Long requestingUserId = jwtUtil.extractUserId(token);
 
         // Construir filtros si se proporcionaron
         ActivityFilterRequest filters = null;
@@ -127,7 +143,7 @@ public class AccountController {
                     .build();
         }
 
-        List<TransactionResponse> activity = transactionService.getAllActivity(id, requestingUserId, filters);
+        List<TransactionResponse> activity = transactionService.getAllActivity(id, authenticatedUserId, filters);
         return ResponseEntity.ok(activity);
     }
 
@@ -135,14 +151,10 @@ public class AccountController {
     public ResponseEntity<TransactionResponse> getActivityDetail(
             @PathVariable Long id,
             @PathVariable Long transactionId,
-            @RequestHeader("Authorization") String authHeader) {
+            @RequestHeader("X-User-Id") Long authenticatedUserId) {
         logger.info("GET /api/accounts/{}/activity/{} - Fetching activity detail", id, transactionId);
 
-        // Extraer userId del token JWT
-        String token = extractTokenFromHeader(authHeader);
-        Long requestingUserId = jwtUtil.extractUserId(token);
-
-        TransactionResponse detail = transactionService.getActivityDetail(id, transactionId, requestingUserId);
+        TransactionResponse detail = transactionService.getActivityDetail(id, transactionId, authenticatedUserId);
         return ResponseEntity.ok(detail);
     }
 
@@ -150,30 +162,42 @@ public class AccountController {
     public ResponseEntity<DepositResponse> createDeposit(
             @PathVariable Long id,
             @Valid @RequestBody CreateDepositRequest request,
-            @RequestHeader("Authorization") String authHeader) {
-        logger.info("POST /api/accounts/{}/transferences - Creating deposit from card {}", id, request.getCardId());
+            @RequestHeader("X-User-Id") Long authenticatedUserId) {
+        logger.info("POST /api/accounts/{}/deposit - Creating deposit from card {}", id, request.getCardId());
 
-        // Extraer userId del token JWT
-        String token = extractTokenFromHeader(authHeader);
-        Long requestingUserId = jwtUtil.extractUserId(token);
-
-        DepositResponse response = transactionService.createDeposit(id, request, requestingUserId);
+        DepositResponse response = transactionService.createDeposit(id, request, authenticatedUserId);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
     @PatchMapping("/{id}")
     public ResponseEntity<AccountResponse> updateAccount(
             @PathVariable Long id,
-            @Valid @RequestBody UpdateAccountRequest request) {
+            @Valid @RequestBody UpdateAccountRequest request,
+            @RequestHeader("X-User-Id") Long authenticatedUserId) {
         logger.info("PATCH /api/accounts/{} - Updating account", id);
+
+        // Validar ownership antes de permitir actualización
+        validateAccountOwnership(id, authenticatedUserId);
+
         AccountResponse response = accountService.updateAccount(id, request);
         return ResponseEntity.ok(response);
     }
 
-    private String extractTokenFromHeader(String authHeader) {
-        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-            throw new IllegalArgumentException("Invalid Authorization header format. Expected: Bearer <token>");
+    /**
+     * Valida que el usuario autenticado es el dueño de la cuenta especificada
+     * @param accountId ID de la cuenta a validar
+     * @param authenticatedUserId ID del usuario autenticado (desde X-User-Id header)
+     * @throws IllegalArgumentException si el usuario no es el dueño de la cuenta
+     */
+    private void validateAccountOwnership(Long accountId, Long authenticatedUserId) {
+        AccountResponse account = accountService.getAccountById(accountId);
+        
+        if (!account.getUserId().equals(authenticatedUserId)) {
+            logger.warn("User {} attempted to access account {} (owned by user {})", 
+                       authenticatedUserId, accountId, account.getUserId());
+            throw new IllegalArgumentException("You can only access your own account");
         }
-        return authHeader.substring(7);
+        
+        logger.debug("✅ Ownership validated: User {} owns account {}", authenticatedUserId, accountId);
     }
 }

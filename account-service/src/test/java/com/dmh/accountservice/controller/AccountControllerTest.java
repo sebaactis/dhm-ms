@@ -60,6 +60,7 @@ class AccountControllerTest {
         );
 
         mockMvc.perform(post("/api/accounts")
+                .header("X-User-Id", "1")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(requestJson))
             .andExpect(status().isCreated())
@@ -67,6 +68,23 @@ class AccountControllerTest {
             .andExpect(jsonPath("$.userId").value(1))
             .andExpect(jsonPath("$.cvu").value("1234567890123456789012"))
             .andExpect(jsonPath("$.alias").value("sol.luna.estrella"));
+    }
+
+    @Test
+    void testCreateAccount_UnauthorizedUser_ThrowsException() throws Exception {
+        String requestJson = """
+            {
+                "userId": 1
+            }
+            """;
+
+        // Usuario autenticado (ID 2) intenta crear cuenta para usuario 1
+        mockMvc.perform(post("/api/accounts")
+                .header("X-User-Id", "2")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(requestJson))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.message").value("You can only create an account for yourself"));
     }
 
     @Test
@@ -81,6 +99,7 @@ class AccountControllerTest {
             .thenThrow(new AccountAlreadyExistsException("Account already exists for user"));
 
         mockMvc.perform(post("/api/accounts")
+                .header("X-User-Id", "1")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(requestJson))
             .andExpect(status().isConflict());
@@ -100,11 +119,23 @@ class AccountControllerTest {
                 .build()
         );
 
-        mockMvc.perform(get("/api/accounts/user/{userId}", userId))
+        mockMvc.perform(get("/api/accounts/user/{userId}", userId)
+                .header("X-User-Id", "1"))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.id").value(1))
             .andExpect(jsonPath("$.userId").value(userId))
             .andExpect(jsonPath("$.cvu").value("1234567890123456789012"));
+    }
+
+    @Test
+    void testGetAccountByUserId_UnauthorizedUser_ThrowsException() throws Exception {
+        Long userId = 1L;
+
+        // Usuario autenticado (ID 2) intenta acceder a cuenta de usuario 1
+        mockMvc.perform(get("/api/accounts/user/{userId}", userId)
+                .header("X-User-Id", "2"))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.message").value("You can only access your own account"));
     }
 
     @Test
@@ -113,7 +144,95 @@ class AccountControllerTest {
         when(accountService.getAccountByUserId(userId))
             .thenThrow(new AccountNotFoundException("Account not found"));
 
-        mockMvc.perform(get("/api/accounts/user/{userId}", userId))
+        mockMvc.perform(get("/api/accounts/user/{userId}", userId)
+                .header("X-User-Id", "1"))
             .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void testGetAccountById_Success() throws Exception {
+        Long accountId = 1L;
+        Long userId = 1L;
+
+        when(accountService.getAccountById(accountId)).thenReturn(
+            AccountResponse.builder()
+                .id(accountId)
+                .userId(userId)
+                .cvu("1234567890123456789012")
+                .alias("sol.luna.estrella")
+                .balance(java.math.BigDecimal.ZERO)
+                .build()
+        );
+
+        mockMvc.perform(get("/api/accounts/{id}", accountId)
+                .header("X-User-Id", "1"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.id").value(accountId))
+            .andExpect(jsonPath("$.userId").value(userId));
+    }
+
+    @Test
+    void testGetAccountById_UnauthorizedUser_ThrowsException() throws Exception {
+        Long accountId = 1L;
+
+        when(accountService.getAccountById(accountId)).thenReturn(
+            AccountResponse.builder()
+                .id(accountId)
+                .userId(1L) // Cuenta pertenece a usuario 1
+                .cvu("1234567890123456789012")
+                .alias("sol.luna.estrella")
+                .balance(java.math.BigDecimal.ZERO)
+                .build()
+        );
+
+        // Usuario autenticado (ID 2) intenta acceder a cuenta de usuario 1
+        mockMvc.perform(get("/api/accounts/{id}", accountId)
+                .header("X-User-Id", "2"))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.message").value("You can only access your own account"));
+    }
+
+    @Test
+    void testGetAccountTransactions_Success() throws Exception {
+        Long accountId = 1L;
+        Long userId = 1L;
+
+        when(accountService.getAccountById(accountId)).thenReturn(
+            AccountResponse.builder()
+                .id(accountId)
+                .userId(userId)
+                .cvu("1234567890123456789012")
+                .alias("sol.luna.estrella")
+                .balance(java.math.BigDecimal.ZERO)
+                .build()
+        );
+
+        when(transactionService.getLastTransactions(accountId, 5)).thenReturn(java.util.List.of());
+
+        mockMvc.perform(get("/api/accounts/{id}/transactions", accountId)
+                .header("X-User-Id", "1")
+                .param("limit", "5"))
+            .andExpect(status().isOk());
+    }
+
+    @Test
+    void testGetAccountTransactions_UnauthorizedUser_ThrowsException() throws Exception {
+        Long accountId = 1L;
+
+        when(accountService.getAccountById(accountId)).thenReturn(
+            AccountResponse.builder()
+                .id(accountId)
+                .userId(1L) // Cuenta pertenece a usuario 1
+                .cvu("1234567890123456789012")
+                .alias("sol.luna.estrella")
+                .balance(java.math.BigDecimal.ZERO)
+                .build()
+        );
+
+        // Usuario autenticado (ID 2) intenta acceder a transacciones de cuenta de usuario 1
+        mockMvc.perform(get("/api/accounts/{id}/transactions", accountId)
+                .header("X-User-Id", "2"))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.message").value("You can only access your own account"));
     }
 }

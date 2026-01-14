@@ -269,13 +269,14 @@ public class TransactionService {
         // Agrupar por destinatario y obtener la última fecha de transferencia
         // Extraemos el destinatario de la descripción: "Transfer to CVU: xxxxxxx" o "Transfer to Alias: xxxxxx"
         List<RecentTransferRecipient> recipients = transfersOut.stream()
-                .map(t -> extractRecipientFromDescription(t.getDescription()))
+                .map(t -> extractRecipientFromDescription(t))
                 .collect(Collectors.toList());
 
         logger.info("Found {} recent transfer recipients for accountId: {}", recipients.size(), accountId);
 
         return recipients;
     }
+
 
     @Transactional
     public TransferResponse performTransfer(Long accountId, CreateTransferRequest request, Long requestingUserId) {
@@ -364,18 +365,18 @@ public class TransactionService {
     }
 
     /**
-     * Extrae el destinatario de la descripción de la transacción.
+     * Extrae el destinatario, monto y fecha de la transacción.
      * Formato esperado: "Transfer to CVU: xxxxxxx" o "Transfer to Alias: xxxxxx"
      */
-    private RecentTransferRecipient extractRecipientFromDescription(String description) {
+    private RecentTransferRecipient extractRecipientFromDescription(Transaction transaction) {
         // El formato es "Transfer to CVU: xxxxxxx" o "Transfer to Alias: xxxxxx"
-        String[] parts = description.split(": ");
-        String destination = parts.length > 1 ? parts[1] : description;
+        String[] parts = transaction.getDescription().split(": ");
+        String destination = parts.length > 1 ? parts[1] : transaction.getDescription();
 
         return RecentTransferRecipient.builder()
                 .destination(destination)
-                .amount(null) // No tenemos el monto aquí, pero podríamos extraerlo si se cambia el formato
-                .lastTransferDate(null) // Necesitaríamos la fecha de la transacción
+                .amount(transaction.getAmount())
+                .lastTransferDate(transaction.getCreatedAt())
                 .build();
     }
 
