@@ -7,7 +7,6 @@ import com.dmh.userservice.dto.RegisterUserRequest;
 import com.dmh.userservice.dto.UpdateUserRequest;
 import com.dmh.userservice.dto.UserResponse;
 import com.dmh.userservice.service.UserService;
-import com.dmh.userservice.util.JwtUtil;
 import jakarta.validation.Valid;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -24,11 +23,9 @@ public class UserController {
     private static final Logger logger = LoggerFactory.getLogger(UserController.class);
 
     private final UserService userService;
-    private final JwtUtil jwtUtil;
 
-    public UserController(UserService userService, JwtUtil jwtUtil) {
+    public UserController(UserService userService) {
         this.userService = userService;
-        this.jwtUtil = jwtUtil;
     }
 
     @PostMapping("/register")
@@ -46,8 +43,10 @@ public class UserController {
     }
 
     @PostMapping("/logout")
-    public ResponseEntity<LogoutResponse> logout(@RequestHeader("Authorization") String authHeader) {
-        logger.info("POST /api/users/logout - Logout attempt");
+    public ResponseEntity<LogoutResponse> logout(
+            @RequestHeader("Authorization") String authHeader,
+            @RequestHeader("X-User-Id") Long authenticatedUserId) {
+        logger.info("POST /api/users/logout - Logout attempt for user: {}", authenticatedUserId);
 
         String token = extractTokenFromHeader(authHeader);
 
@@ -65,16 +64,12 @@ public class UserController {
     @GetMapping("/{id}")
     public ResponseEntity<UserResponse> getUserById(
             @PathVariable Long id,
-            @RequestHeader("Authorization") String authHeader) {
+            @RequestHeader("X-User-Id") Long authenticatedUserId) {
         logger.info("GET /api/users/{} - Fetching user", id);
 
-        // Extraer userId del token JWT
-        String token = extractTokenFromHeader(authHeader);
-        Long requestingUserId = jwtUtil.extractUserId(token);
-
         // Validar que el usuario solo puede ver su propio perfil
-        if (!requestingUserId.equals(id)) {
-            logger.warn("User {} attempted to access profile of user {}", requestingUserId, id);
+        if (!authenticatedUserId.equals(id)) {
+            logger.warn("User {} attempted to access profile of user {}", authenticatedUserId, id);
             throw new IllegalArgumentException("You can only access your own profile");
         }
 
@@ -86,16 +81,12 @@ public class UserController {
     public ResponseEntity<UserResponse> updateUser(
             @PathVariable Long id,
             @Valid @RequestBody UpdateUserRequest request,
-            @RequestHeader("Authorization") String authHeader) {
+            @RequestHeader("X-User-Id") Long authenticatedUserId) {
         logger.info("PATCH /api/users/{} - Updating user", id);
 
-        // Extraer userId del token JWT
-        String token = extractTokenFromHeader(authHeader);
-        Long requestingUserId = jwtUtil.extractUserId(token);
-
         // Validar que el usuario solo puede actualizar su propio perfil
-        if (!requestingUserId.equals(id)) {
-            logger.warn("User {} attempted to update profile of user {}", requestingUserId, id);
+        if (!authenticatedUserId.equals(id)) {
+            logger.warn("User {} attempted to update profile of user {}", authenticatedUserId, id);
             throw new IllegalArgumentException("You can only update your own profile");
         }
 

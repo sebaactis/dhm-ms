@@ -51,8 +51,11 @@
 									"if (pm.response.code === 201) {",
 									"    const response = pm.response.json();",
 									"    pm.collectionVariables.set('userId', response.id);",
-									"    pm.collectionVariables.set('accountId', response.accountId);",
-									"    console.log('User registered: ID=' + response.id);",
+									"    console.log('✅ User registered: ID=' + response.id);",
+									"    console.log('✅ CVU: ' + response.cvu);",
+									"    console.log('✅ Alias: ' + response.alias);",
+									"} else {",
+									"    console.log('❌ Register failed: ' + pm.response.status);",
 									"}"
 								],
 								"type": "text/javascript"
@@ -91,7 +94,10 @@
 									"    const response = pm.response.json();",
 									"    pm.collectionVariables.set('token', response.token);",
 									"    pm.collectionVariables.set('userId', response.userId);",
-									"    console.log('Login successful. Token saved.');",
+									"    console.log('✅ Login successful. Token saved.');",
+									"    console.log('✅ User ID: ' + response.userId);",
+									"} else {",
+									"    console.log('❌ Login failed: ' + pm.response.status);",
 									"}"
 								],
 								"type": "text/javascript"
@@ -120,47 +126,24 @@
 					"response": []
 				},
 				{
-					"name": "3. Logout",
-					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Authorization",
-								"value": "Bearer {{token}}",
-								"type": "text"
+					"name": "3. Get User by ID",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    const response = pm.response.json();",
+									"    console.log('✅ User retrieved successfully');",
+									"    console.log('Name: ' + response.firstName + ' ' + response.lastName);",
+									"} else {",
+									"    console.log('❌ Get User failed: ' + pm.response.status);",
+									"}"
+								],
+								"type": "text/javascript"
 							}
-						],
-						"url": {
-							"raw": "{{baseUrl}}/api/users/logout",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "users", "logout"]
-						},
-						"description": "Cierra la sesión del usuario y invalida el token"
-					},
-					"response": []
-				},
-				{
-					"name": "4. Validate Token",
-					"request": {
-						"method": "GET",
-						"header": [],
-						"url": {
-							"raw": "{{baseUrl}}/api/users/token/validate?token={{token}}",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "users", "token", "validate"],
-							"query": [
-								{
-									"key": "token",
-									"value": "{{token}}"
-								}
-							]
-						},
-						"description": "Valida si un token JWT es válido"
-					},
-					"response": []
-				},
-				{
-					"name": "5. Get User by ID",
+						}
+					],
 					"request": {
 						"method": "GET",
 						"header": [
@@ -180,7 +163,22 @@
 					"response": []
 				},
 				{
-					"name": "6. Update User",
+					"name": "4. Update User",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    console.log('✅ User updated successfully');",
+									"} else {",
+									"    console.log('❌ Update User failed: ' + pm.response.status);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
 					"request": {
 						"method": "PATCH",
 						"header": [
@@ -196,7 +194,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"firstName\": \"Juan Carlos\",\n  \"phone\": \"+541198765432\"\n}"
+							"raw": "{\n  \"email\": \"juan.perez.updated@example.com\",\n  \"phone\": \"+541198765432\"\n}"
 						},
 						"url": {
 							"raw": "{{baseUrl}}/api/users/{{userId}}",
@@ -214,16 +212,21 @@
 			"name": "Account Service",
 			"item": [
 				{
-					"name": "7. Create Account",
+					"name": "5. Get Account by User ID",
 					"event": [
 						{
 							"listen": "test",
 							"script": {
 								"exec": [
-									"if (pm.response.code === 201) {",
+									"if (pm.response.code === 200) {",
 									"    const response = pm.response.json();",
 									"    pm.collectionVariables.set('accountId', response.id);",
-									"    console.log('Account created: ID=' + response.id);",
+									"    console.log('✅ Account retrieved: ID=' + response.id);",
+									"    console.log('Balance: $' + response.balance);",
+									"    console.log('CVU: ' + response.cvu);",
+									"    console.log('Alias: ' + response.alias);",
+									"} else {",
+									"    console.log('❌ Get Account failed: ' + pm.response.status);",
 									"}"
 								],
 								"type": "text/javascript"
@@ -231,31 +234,14 @@
 						}
 					],
 					"request": {
-						"method": "POST",
+						"method": "GET",
 						"header": [
 							{
-								"key": "Content-Type",
-								"value": "application/json"
+								"key": "Authorization",
+								"value": "Bearer {{token}}",
+								"type": "text"
 							}
 						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n  \"userId\": {{userId}}\n}"
-						},
-						"url": {
-							"raw": "{{baseUrl}}/api/accounts",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "accounts"]
-						},
-						"description": "Crea una nueva cuenta para un usuario"
-					},
-					"response": []
-				},
-				{
-					"name": "8. Get Account by User ID",
-					"request": {
-						"method": "GET",
-						"header": [],
 						"url": {
 							"raw": "{{baseUrl}}/api/accounts/user/{{userId}}",
 							"host": ["{{baseUrl}}"],
@@ -266,10 +252,31 @@
 					"response": []
 				},
 				{
-					"name": "9. Get Account by ID",
+					"name": "6. Get Account by ID",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    console.log('✅ Account details retrieved');",
+									"} else {",
+									"    console.log('❌ Get Account by ID failed: ' + pm.response.status);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
 					"request": {
 						"method": "GET",
-						"header": [],
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}",
+								"type": "text"
+							}
+						],
 						"url": {
 							"raw": "{{baseUrl}}/api/accounts/{{accountId}}",
 							"host": ["{{baseUrl}}"],
@@ -278,378 +285,15 @@
 						"description": "Obtiene una cuenta por su ID"
 					},
 					"response": []
-				},
-				{
-					"name": "10. Get Last Transactions",
-					"request": {
-						"method": "GET",
-						"header": [],
-						"url": {
-							"raw": "{{baseUrl}}/api/accounts/{{accountId}}/transactions?limit=10",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "accounts", "{{accountId}}", "transactions"],
-							"query": [
-								{
-									"key": "limit",
-									"value": "10",
-									"description": "Número de transacciones a retornar (default: 5)"
-								}
-							]
-						},
-						"description": "Obtiene las últimas N transacciones de una cuenta"
-					},
-					"response": []
-				},
-				{
-					"name": "11. Get All Activity (No Filters)",
-					"request": {
-						"method": "GET",
-						"header": [
-							{
-								"key": "Authorization",
-								"value": "Bearer {{token}}",
-								"type": "text"
-							}
-						],
-						"url": {
-							"raw": "{{baseUrl}}/api/accounts/{{accountId}}/activity",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "accounts", "{{accountId}}", "activity"]
-						},
-						"description": "Obtiene toda la actividad de una cuenta sin filtros"
-					},
-					"response": []
-				},
-				{
-					"name": "12. Filter Activity by Type",
-					"request": {
-						"method": "GET",
-						"header": [
-							{
-								"key": "Authorization",
-								"value": "Bearer {{token}}",
-								"type": "text"
-							}
-						],
-						"url": {
-							"raw": "{{baseUrl}}/api/accounts/{{accountId}}/activity?type=DEPOSIT",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "accounts", "{{accountId}}", "activity"],
-							"query": [
-								{
-									"key": "type",
-									"value": "DEPOSIT",
-									"description": "DEPOSIT, WITHDRAWAL, TRANSFER_IN, TRANSFER_OUT"
-								}
-							]
-						},
-						"description": "Filtra actividad por tipo de transacción"
-					},
-					"response": []
-				},
-				{
-					"name": "13. Filter Activity by Amount Range",
-					"request": {
-						"method": "GET",
-						"header": [
-							{
-								"key": "Authorization",
-								"value": "Bearer {{token}}",
-								"type": "text"
-							}
-						],
-						"url": {
-							"raw": "{{baseUrl}}/api/accounts/{{accountId}}/activity?amountRange=RANGE_1000_5000",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "accounts", "{{accountId}}", "activity"],
-							"query": [
-								{
-									"key": "amountRange",
-									"value": "RANGE_1000_5000",
-									"description": "RANGE_0_1000, RANGE_1000_5000, RANGE_5000_20000, RANGE_20000_100000, RANGE_OVER_100000"
-								}
-							]
-						},
-						"description": "Filtra actividad por rango de monto"
-					},
-					"response": []
-				},
-				{
-					"name": "14. Filter Activity by Date Period",
-					"request": {
-						"method": "GET",
-						"header": [
-							{
-								"key": "Authorization",
-								"value": "Bearer {{token}}",
-								"type": "text"
-							}
-						],
-						"url": {
-							"raw": "{{baseUrl}}/api/accounts/{{accountId}}/activity?dateFrom=2026-01-01&dateTo=2026-01-31",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "accounts", "{{accountId}}", "activity"],
-							"query": [
-								{
-									"key": "dateFrom",
-									"value": "2026-01-01",
-									"description": "Fecha desde (yyyy-MM-dd)"
-								},
-								{
-									"key": "dateTo",
-									"value": "2026-01-31",
-									"description": "Fecha hasta (yyyy-MM-dd)"
-								}
-							]
-						},
-						"description": "Filtra actividad por período de fechas"
-					},
-					"response": []
-				},
-				{
-					"name": "15. Filter Activity (Multiple Filters)",
-					"request": {
-						"method": "GET",
-						"header": [
-							{
-								"key": "Authorization",
-								"value": "Bearer {{token}}",
-								"type": "text"
-							}
-						],
-						"url": {
-							"raw": "{{baseUrl}}/api/accounts/{{accountId}}/activity?type=DEPOSIT&amountRange=RANGE_1000_5000&dateFrom=2026-01-01&dateTo=2026-01-31",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "accounts", "{{accountId}}", "activity"],
-							"query": [
-								{
-									"key": "type",
-									"value": "DEPOSIT"
-								},
-								{
-									"key": "amountRange",
-									"value": "RANGE_1000_5000"
-								},
-								{
-									"key": "dateFrom",
-									"value": "2026-01-01"
-								},
-								{
-									"key": "dateTo",
-									"value": "2026-01-31"
-								}
-							]
-						},
-						"description": "Filtra actividad con múltiples filtros combinados"
-					},
-					"response": []
-				},
-				{
-					"name": "16. Get Activity Detail",
-					"request": {
-						"method": "GET",
-						"header": [
-							{
-								"key": "Authorization",
-								"value": "Bearer {{token}}",
-								"type": "text"
-							}
-						],
-						"url": {
-							"raw": "{{baseUrl}}/api/accounts/{{accountId}}/activity/{{transactionId}}",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "accounts", "{{accountId}}", "activity", "{{transactionId}}"]
-						},
-						"description": "Obtiene el detalle de una transacción específica"
-					},
-					"response": []
-				},
-				{
-					"name": "17. Deposit from Card",
-					"event": [
-						{
-							"listen": "test",
-							"script": {
-								"exec": [
-									"if (pm.response.code === 201) {",
-									"    const response = pm.response.json();",
-									"    pm.collectionVariables.set('transactionId', response.transactionId);",
-									"    console.log('Deposit created: Transaction ID=' + response.transactionId);",
-									"    console.log('New balance: ' + response.newBalance);",
-									"}"
-								],
-								"type": "text/javascript"
-							}
-						}
-					],
-					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Authorization",
-								"value": "Bearer {{token}}",
-								"type": "text"
-							},
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n  \"cardId\": {{cardId}},\n  \"amount\": 500.00,\n  \"description\": \"Recarga de billetera\"\n}"
-						},
-						"url": {
-							"raw": "{{baseUrl}}/api/accounts/{{accountId}}/deposit",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "accounts", "{{accountId}}", "deposit"]
-						},
-						"description": "Ingresa dinero desde una tarjeta a la billetera"
-					},
-					"response": []
-				},
-				{
-					"name": "18. Get Recent Transfers (Last Destinations)",
-					"request": {
-						"method": "GET",
-						"header": [
-							{
-								"key": "Authorization",
-								"value": "Bearer {{token}}",
-								"type": "text"
-							}
-						],
-						"url": {
-							"raw": "{{baseUrl}}/api/accounts/{{accountId}}/transferences?limit=5",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "accounts", "{{accountId}}", "transferences"],
-							"query": [
-								{
-									"key": "limit",
-									"value": "5",
-									"description": "Número de destinatarios a retornar (default: 5)"
-								}
-							]
-						},
-						"description": "Obtiene los últimos N destinatarios de transferencias salientes. Status codes: 200 OK, 403 Forbidden (permisos insuficientes)"
-					},
-					"response": []
-				},
-				{
-					"name": "19. Perform Transfer",
-					"event": [
-						{
-							"listen": "test",
-							"script": {
-								"exec": [
-									"if (pm.response.code === 200) {",
-									"    const response = pm.response.json();",
-									"    pm.collectionVariables.set('transactionId', response.transactionId);",
-									"    console.log('Transfer completed: Transaction ID=' + response.transactionId);",
-									"    console.log('New balance: ' + response.newBalance);",
-									"}"
-								],
-								"type": "text/javascript"
-							}
-						}
-					],
-					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Authorization",
-								"value": "Bearer {{token}}",
-								"type": "text"
-							},
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n  \"destination\": \"1234567890123456789012\",\n  \"amount\": 100.00,\n  \"description\": \"Pago de cena\"\n}"
-						},
-						"url": {
-							"raw": "{{baseUrl}}/api/accounts/{{accountId}}/transfers",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "accounts", "{{accountId}}", "transfers"]
-						},
-						"description": "Realiza una transferencia a otra cuenta usando CVU, CBU o alias. Status codes: 200 OK, 400 Bad Request (cuenta inexistente), 403 Forbidden (permisos insuficientes), 410 Gone (fondos insuficientes), 404 Not Found"
-					},
-					"response": []
-				},
-				{
-					"name": "20. Update Account Alias",
-					"request": {
-						"method": "PATCH",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n  \"alias\": \"mi.nueva.billetera\"\n}"
-						},
-						"url": {
-							"raw": "{{baseUrl}}/api/accounts/{{accountId}}",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "accounts", "{{accountId}}"]
-						},
-						"description": "Actualiza el alias de una cuenta"
-					},
-					"response": []
 				}
 			],
-			"description": "Endpoints para gestión de cuentas y transacciones"
+			"description": "Endpoints para gestión de cuentas"
 		},
 		{
 			"name": "Card Service",
 			"item": [
 				{
-					"name": "21. Get All Cards",
-					"request": {
-						"method": "GET",
-						"header": [
-							{
-								"key": "Authorization",
-								"value": "Bearer {{token}}",
-								"type": "text"
-							}
-						],
-						"url": {
-							"raw": "{{baseUrl}}/api/accounts/{{accountId}}/cards",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "accounts", "{{accountId}}", "cards"]
-						},
-						"description": "Lista todas las tarjetas asociadas a una cuenta"
-					},
-					"response": []
-				},
-				{
-					"name": "22. Get Card by ID",
-					"request": {
-						"method": "GET",
-						"header": [
-							{
-								"key": "Authorization",
-								"value": "Bearer {{token}}",
-								"type": "text"
-							}
-						],
-						"url": {
-							"raw": "{{baseUrl}}/api/accounts/{{accountId}}/cards/{{cardId}}",
-							"host": ["{{baseUrl}}"],
-							"path": ["api", "accounts", "{{accountId}}", "cards", "{{cardId}}"]
-						},
-						"description": "Obtiene una tarjeta específica por su ID"
-					},
-					"response": []
-				},
-				{
-					"name": "23. Create Card",
+					"name": "7. Create Card",
 					"event": [
 						{
 							"listen": "test",
@@ -658,7 +302,10 @@
 									"if (pm.response.code === 201) {",
 									"    const response = pm.response.json();",
 									"    pm.collectionVariables.set('cardId', response.id);",
-									"    console.log('Card created: ID=' + response.id);",
+									"    console.log('✅ Card created: ID=' + response.id);",
+									"    console.log('Card: **** **** **** ' + response.lastFourDigits);",
+									"} else {",
+									"    console.log('❌ Create Card failed: ' + pm.response.status);",
 									"}"
 								],
 								"type": "text/javascript"
@@ -692,9 +339,60 @@
 					"response": []
 				},
 				{
-					"name": "24. Delete Card (Block)",
+					"name": "8. Get All Cards",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    const cards = pm.response.json();",
+									"    console.log('✅ Cards retrieved: ' + cards.length + ' card(s)');",
+									"} else {",
+									"    console.log('❌ Get All Cards failed: ' + pm.response.status);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
 					"request": {
-						"method": "DELETE",
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/accounts/{{accountId}}/cards",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "accounts", "{{accountId}}", "cards"]
+						},
+						"description": "Lista todas las tarjetas asociadas a una cuenta"
+					},
+					"response": []
+				},
+				{
+					"name": "9. Get Card by ID",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    console.log('✅ Card details retrieved');",
+									"} else {",
+									"    console.log('❌ Get Card by ID failed: ' + pm.response.status);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
 						"header": [
 							{
 								"key": "Authorization",
@@ -707,12 +405,262 @@
 							"host": ["{{baseUrl}}"],
 							"path": ["api", "accounts", "{{accountId}}", "cards", "{{cardId}}"]
 						},
-						"description": "Elimina (bloquea) una tarjeta"
+						"description": "Obtiene una tarjeta específica por su ID"
 					},
 					"response": []
 				}
 			],
-			"description": "Endpoints para gestión de tarjetas (CRUD completo)"
+			"description": "Endpoints para gestión de tarjetas"
+		},
+		{
+			"name": "Transaction Service",
+			"item": [
+				{
+					"name": "10. Deposit from Card",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 201) {",
+									"    const response = pm.response.json();",
+									"    pm.collectionVariables.set('transactionId', response.transactionId);",
+									"    console.log('✅ Deposit created: Transaction ID=' + response.transactionId);",
+									"    console.log('Amount: $' + response.amount);",
+									"    console.log('New balance: $' + response.newBalance);",
+									"} else {",
+									"    console.log('❌ Deposit failed: ' + pm.response.status);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"cardId\": {{cardId}},\n  \"amount\": 5000.00,\n  \"description\": \"Recarga de billetera\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/accounts/{{accountId}}/deposit",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "accounts", "{{accountId}}", "deposit"]
+						},
+						"description": "Ingresa dinero desde una tarjeta a la billetera"
+					},
+					"response": []
+				},
+				{
+					"name": "11. Get Last Transactions",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    const transactions = pm.response.json();",
+									"    console.log('✅ Transactions retrieved: ' + transactions.length + ' transaction(s)');",
+									"    if (transactions.length > 0) {",
+									"        pm.collectionVariables.set('transactionId', transactions[0].id);",
+									"    }",
+									"} else {",
+									"    console.log('❌ Get Last Transactions failed: ' + pm.response.status);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/accounts/{{accountId}}/transactions?limit=10",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "accounts", "{{accountId}}", "transactions"],
+							"query": [
+								{
+									"key": "limit",
+									"value": "10",
+									"description": "Número de transacciones a retornar (default: 5)"
+								}
+							]
+						},
+						"description": "Obtiene las últimas N transacciones de una cuenta"
+					},
+					"response": []
+				},
+				{
+					"name": "12. Get All Activity (No Filters)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    const activity = pm.response.json();",
+									"    console.log('✅ Activity retrieved: ' + activity.length + ' transaction(s)');",
+									"} else {",
+									"    console.log('❌ Get All Activity failed: ' + pm.response.status);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/accounts/{{accountId}}/activity",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "accounts", "{{accountId}}", "activity"]
+						},
+						"description": "Obtiene toda la actividad de una cuenta sin filtros"
+					},
+					"response": []
+				},
+				{
+					"name": "13. Get Activity Detail",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    console.log('✅ Activity detail retrieved');",
+									"} else {",
+									"    console.log('❌ Get Activity Detail failed: ' + pm.response.status);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/accounts/{{accountId}}/activity/{{transactionId}}",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "accounts", "{{accountId}}", "activity", "{{transactionId}}"]
+						},
+						"description": "Obtiene el detalle de una transacción específica"
+					},
+					"response": []
+				},
+				{
+					"name": "14. Update Account Alias",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    const response = pm.response.json();",
+									"    console.log('✅ Alias updated to: ' + response.alias);",
+									"} else {",
+									"    console.log('❌ Update Alias failed: ' + pm.response.status);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"alias\": \"mi.nueva.billetera\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/accounts/{{accountId}}",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "accounts", "{{accountId}}"]
+						},
+						"description": "Actualiza el alias de una cuenta"
+					},
+					"response": []
+				},
+				{
+					"name": "15. Logout",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    console.log('✅ Logout successful. Token invalidated.');",
+									"    pm.collectionVariables.set('token', '');",
+									"} else {",
+									"    console.log('❌ Logout failed: ' + pm.response.status);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/users/logout",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "users", "logout"]
+						},
+						"description": "Cierra la sesión del usuario y invalida el token"
+					},
+					"response": []
+				}
+			],
+			"description": "Endpoints para transacciones y actividad de cuentas"
 		}
 	]
 }

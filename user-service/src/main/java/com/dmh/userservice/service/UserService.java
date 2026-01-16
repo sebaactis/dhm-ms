@@ -81,7 +81,7 @@ public class UserService {
 
 
         CreateAccountRequestDTO accountRequest = new CreateAccountRequestDTO(savedUser.getId());
-        ResponseEntity<AccountResponseDTO> accountResponse = accountServiceClient.createAccount(accountRequest);
+        ResponseEntity<AccountResponseDTO> accountResponse = accountServiceClient.createAccount(accountRequest, savedUser.getId());
         AccountResponseDTO account = accountResponse.getBody();
 
         logger.info("Account created for userId: {}, CVU: {}, Alias: {}",
@@ -184,7 +184,7 @@ public class UserService {
                 });
 
         // Obtener datos de la cuenta
-        ResponseEntity<AccountResponseDTO> accountResponse = accountServiceClient.getAccountByUserId(userId);
+        ResponseEntity<AccountResponseDTO> accountResponse = accountServiceClient.getAccountByUserId(userId, userId);
         AccountResponseDTO account = accountResponse.getBody();
 
         return UserResponse.builder()
@@ -231,7 +231,7 @@ public class UserService {
         User updatedUser = userRepository.save(user);
 
         // Obtener datos de la cuenta para incluir en la respuesta
-        ResponseEntity<AccountResponseDTO> accountResponse = accountServiceClient.getAccountByUserId(userId);
+        ResponseEntity<AccountResponseDTO> accountResponse = accountServiceClient.getAccountByUserId(userId, userId);
         AccountResponseDTO account = accountResponse.getBody();
 
         return UserResponse.builder()

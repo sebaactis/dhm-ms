@@ -38,9 +38,6 @@ class UserControllerTest {
     @MockBean
     private UserService userService;
 
-    @MockBean
-    private com.dmh.userservice.util.JwtUtil jwtUtil;
-
     @Test
     void testRegister_Success() throws Exception {
         String requestJson = """
@@ -163,7 +160,8 @@ class UserControllerTest {
     @Test
     void testLogout_Success() throws Exception {
         mockMvc.perform(post("/api/users/logout")
-                .header("Authorization", "Bearer valid.token"))
+                .header("Authorization", "Bearer valid.token")
+                .header("X-User-Id", "1"))
             .andExpect(status().isOk());
     }
 
@@ -191,10 +189,8 @@ class UserControllerTest {
     void testUpdateUser_EmptyRequest_ShouldReturnBadRequest() throws Exception {
         String emptyRequestJson = "{}";
 
-        when(jwtUtil.extractUserId("valid.token")).thenReturn(1L);
-
         mockMvc.perform(patch("/api/users/1")
-                .header("Authorization", "Bearer valid.token")
+                .header("X-User-Id", "1")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(emptyRequestJson))
             .andExpect(status().isBadRequest());
@@ -208,7 +204,6 @@ class UserControllerTest {
             }
             """;
 
-        when(jwtUtil.extractUserId("valid.token")).thenReturn(1L);
         when(userService.updateUser(any(Long.class), any())).thenReturn(
             UserResponse.builder()
                 .id(1L)
@@ -221,7 +216,7 @@ class UserControllerTest {
         );
 
         mockMvc.perform(patch("/api/users/1")
-                .header("Authorization", "Bearer valid.token")
+                .header("X-User-Id", "1")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(requestJson))
             .andExpect(status().isOk())

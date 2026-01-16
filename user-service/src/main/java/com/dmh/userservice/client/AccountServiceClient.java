@@ -8,13 +8,18 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 
 @FeignClient(name = "account-service")
 public interface AccountServiceClient {
 
     @PostMapping("/api/accounts")
-    ResponseEntity<AccountResponseDTO> createAccount(@RequestBody CreateAccountRequestDTO request);
+    ResponseEntity<AccountResponseDTO> createAccount(
+            @RequestBody CreateAccountRequestDTO request,
+            @RequestHeader("X-User-Id") Long authenticatedUserId);
 
     @GetMapping("/api/accounts/user/{userId}")
-    ResponseEntity<AccountResponseDTO> getAccountByUserId(@PathVariable Long userId);
+    ResponseEntity<AccountResponseDTO> getAccountByUserId(
+            @PathVariable Long userId,
+            @RequestHeader("X-User-Id") Long authenticatedUserId);
 }

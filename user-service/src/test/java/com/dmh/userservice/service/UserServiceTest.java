@@ -26,6 +26,7 @@ import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -86,11 +87,11 @@ class UserServiceTest {
         accountResponse.setCvu("1234567890123456789012");
         accountResponse.setAlias("sol.luna.estrella");
 
-        when(accountServiceClient.createAccount(any())).thenReturn(ResponseEntity.ok(accountResponse));
+        when(accountServiceClient.createAccount(any(), eq(1L))).thenReturn(ResponseEntity.ok(accountResponse));
 
         assertDoesNotThrow(() -> userService.registerUser(request));
         verify(userRepository, times(1)).save(any(User.class));
-        verify(accountServiceClient, times(1)).createAccount(any());
+        verify(accountServiceClient, times(1)).createAccount(any(), eq(1L));
     }
 
     @Test
