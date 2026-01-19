@@ -39,12 +39,18 @@ buildNumber.properties
 # ==========================================
 # Docker
 # ==========================================
+# Variables de entorno (contienen secretos)
 .env
 .env.local
 .env.*.local
+
+# Docker Compose overrides locales
 docker-compose.override.yml
-Dockerfile
-*.dockerfile
+
+# Volúmenes de Docker (datos generados)
+**/postgres-data/
+**/config-repo-data/
+docker-volumes/
 
 # ==========================================
 # OS
